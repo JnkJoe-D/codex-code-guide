@@ -6,6 +6,7 @@ const path = require('node:path');
 const manifest = require('./package.json');
 
 const repository = 'JnkJoe-D/codex-code-guide';
+const releasesUrl = 'https://github.com/' + repository + '/releases';
 const updateKey = 'codeGuide.githubUpdates';
 const checkedKey = 'codeGuide.lastGithubCheck';
 const intervalMs = 24 * 60 * 60 * 1000;
@@ -70,6 +71,46 @@ function newerThan(candidate, installed) {
 }
 
 let checking = false;
+async function latestRelease() {
+    const response = await fetch('https://api.github.com/repos/' + repository + '/releases/latest', {
+        headers: { Accept: 'application/vnd.github+json', 'User-Agent': manifest.name },
+        signal: AbortSignal.timeout(12000)
+    });
+    if (response.ok) return response.json();
+    if (response.status !== 403 && response.status !== 429) {
+        throw new Error('GitHub 版本检查失败，HTTP ' + response.status + '。');
+    }
+    // REST 限流时，使用公开正式版跳转及同一 Release 的校验文件。
+    const latest = await fetch(releasesUrl + '/latest', {
+        method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(12000)
+    });
+    const prefix = releasesUrl + '/tag/';
+    const destination = latest.headers.get('location');
+    const tag = destination?.startsWith(prefix) ? destination.slice(prefix.length) : '';
+    if (!stableVersion(tag)) throw new Error('GitHub 版本检查已限流，暂时无法读取正式版。');
+    return { tag_name: tag, useChecksumFile: true };
+}
+
+async function packageFor(release) {
+    const tag = release.tag_name;
+    const name = manifest.name + '-' + tag.replace(/^v/, '') + '.vsix';
+    const url = releasesUrl + '/download/' + tag + '/' + name;
+    if (release.useChecksumFile) {
+        const response = await fetch(url + '.sha256', { signal: AbortSignal.timeout(12000) });
+        const [digest, filename] = response.ok ? (await response.text()).trim().split(/\s+/) : [];
+        if (filename !== name || !/^[a-f0-9]{64}$/i.test(digest ?? '')) {
+            throw new Error('GitHub 正式版的 VSIX 校验文件无效。');
+        }
+        return { name, url, digest };
+    }
+    const asset = release.assets?.find(item => item.name === name && item.browser_download_url === url);
+    const digest = /^sha256:([a-f0-9]{64})$/i.exec(asset?.digest ?? '')?.[1];
+    if (!asset || !digest || asset.size <= 0 || asset.size > 16 * 1024 * 1024) {
+        throw new Error('GitHub 正式版缺少有效的 VSIX 或校验信息。');
+    }
+    return { name, url, digest, size: asset.size };
+}
+
 async function checkForUpdates(context, manual, force = false) {
     const mode = context.globalState.get(updateKey, 'notify');
     const checked = context.globalState.get(checkedKey, 0);
@@ -77,36 +118,26 @@ async function checkForUpdates(context, manual, force = false) {
     checking = true;
     try {
         await context.globalState.update(checkedKey, Date.now());
-        const response = await fetch('https://api.github.com/repos/' + repository + '/releases/latest', {
-            headers: { Accept: 'application/vnd.github+json', 'User-Agent': manifest.name },
-            signal: AbortSignal.timeout(12000)
-        });
-        if (!response.ok) throw new Error('GitHub 版本检查失败，HTTP ' + response.status + '。');
-        const release = await response.json();
+        const release = await latestRelease();
         if (release.draft || release.prerelease || !newerThan(release.tag_name, manifest.version)) {
             if (manual) vscode.window.showInformationMessage('已安装最新 GitHub 正式版 v' + manifest.version + '。');
             return;
         }
         const tag = release.tag_name;
-        const name = manifest.name + '-' + tag.replace(/^v/, '') + '.vsix';
-        const url = 'https://github.com/' + repository + '/releases/download/' + tag + '/' + name;
-        const asset = release.assets?.find(item => item.name === name && item.browser_download_url === url);
-        const digest = /^sha256:([a-f0-9]{64})$/i.exec(asset?.digest ?? '')?.[1];
-        if (!asset || !digest || asset.size <= 0 || asset.size > 16 * 1024 * 1024) {
-            throw new Error('GitHub 正式版缺少有效的 VSIX 或校验信息。');
-        }
         if (mode !== 'auto' || manual) {
             const action = await vscode.window.showInformationMessage('代码导读 ' + tag + ' 可更新。', '安装更新', '查看发布说明');
             if (action === '查看发布说明') {
-                await vscode.env.openExternal(vscode.Uri.parse('https://github.com/' + repository + '/releases/tag/' + tag));
+                await vscode.env.openExternal(vscode.Uri.parse(releasesUrl + '/tag/' + tag));
             }
             if (action !== '安装更新') return;
         }
 
+        const { name, url, digest, size } = await packageFor(release);
         const download = await fetch(url, { signal: AbortSignal.timeout(30000) });
         if (!download.ok) throw new Error('VSIX 下载失败，HTTP ' + download.status + '。');
         const bytes = Buffer.from(await download.arrayBuffer());
-        if (bytes.length !== asset.size || createHash('sha256').update(bytes).digest('hex') !== digest.toLowerCase()) {
+        if (bytes.length > 16 * 1024 * 1024 || (size && bytes.length !== size) ||
+            createHash('sha256').update(bytes).digest('hex') !== digest.toLowerCase()) {
             throw new Error('VSIX 的大小或 SHA-256 校验失败。');
         }
         const directory = await fs.mkdtemp(path.join(tmpdir(), 'code-guide-'));

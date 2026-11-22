@@ -449,7 +449,8 @@ class Review {
                 (result.diagnostic ? '\n' + result.diagnostic : ''));
         }
         this.taskDrafts.delete(document.uri.toString());
-        vscode.window.showInformationMessage('修改请求已排队。');
+        const wake = result.needsWake ? await this.wake(target) : '';
+        vscode.window.showInformationMessage('修改请求已排队。' + wake);
     }
 
     async submit(workspace, target) {
@@ -548,7 +549,7 @@ class Review {
         const root = activeRoot() ?? await selectRoot();
         const target = this.targets[root];
         if (!target) throw new Error('请先绑定 Codex 对话。');
-        await vscode.env.openExternal(vscode.Uri.parse('codex://threads/' + threadIdFor(target.id)));
+        await openCodexThread(target);
     }
 
     async setCli() {
@@ -588,13 +589,20 @@ class Review {
         const result = await deliver(executable, batch.root, threadIdFor(target.id), prompt);
         await this.recordDelivery(batch.id, { target, ...result });
         if (result.state === 'queued') {
+            const wake = result.needsWake ? await this.wake(target) : '';
             vscode.window.showInformationMessage(caption + '，已进入「' + target.label + '」的队列。'
-                + (/resume/i.test(result.diagnostic) ? '自动恢复有提示，请在批次详情查看。' : ''));
+                + wake);
         } else {
             vscode.window.showWarningMessage(result.state === 'unknown'
                 ? '投递状态不明，批次已保留。请先查看目标对话。'
                 : 'Codex 拒绝投递，已保留批次。请查看批次详情后重试。');
         }
+    }
+
+    async wake(target) {
+        // CLI 已经入队。打开原对话只负责加载会话，不能重投同一条消息。
+        if (await openCodexThread(target).catch(() => false)) return '已请求桌面端打开目标对话继续处理。';
+        return '请在桌面端打开目标对话继续处理。';
     }
 
     async retry() {
@@ -725,6 +733,10 @@ async function selectRoot() {
 
 function requireTrust() {
     if (!vscode.workspace.isTrusted) throw new Error('请先信任当前工作区，再投递代码批注。');
+}
+
+function openCodexThread(target) {
+    return vscode.env.openExternal(vscode.Uri.parse('codex://threads/' + threadIdFor(target.id)));
 }
 
 function sourceLocation(uri) {

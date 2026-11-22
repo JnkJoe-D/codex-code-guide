@@ -31,10 +31,12 @@ jobs:
           test "$RELEASE_TAG" = "v$(node -p 'require("./package.json").version')"
           for file in ./*.js; do node --check "$file"; done
       - name: Package extension
-        run: npx --yes @vscode/vsce@3.6.2 package
+        run: npx --yes @vscode/vsce@3.6.2 package --no-dependencies
       - name: Publish VSIX
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           name=$(node -p 'require("./package.json").name')
-          gh release create "$RELEASE_TAG" --verify-tag --generate-notes "$name-${RELEASE_TAG#v}.vsix"
+          vsix="$name-${RELEASE_TAG#v}.vsix"
+          sha256sum "$vsix" > "$vsix.sha256"
+          gh release create "$RELEASE_TAG" --verify-tag --generate-notes "$vsix" "$vsix.sha256"

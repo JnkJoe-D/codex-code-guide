@@ -2,7 +2,7 @@
     "name": "zzz-code-guide",
     "displayName": "Codex 代码导读",
     "description": "从 VS Code 向指定的 Codex 对话提交代码批注，并在原位置继续讨论。",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "publisher": "zzz-local",
     "engines": {
         "vscode": "^1.85.0"

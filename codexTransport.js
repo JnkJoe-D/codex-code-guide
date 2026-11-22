@@ -47,7 +47,7 @@ async function deliver(executable, root, thread, prompt) {
     const { error, stdout, stderr } = await invoke(executable,
         ['queue', '--cd', root, '--thread', thread, '--resume', '--message', prompt], root, 20000);
     const diagnostic = (stderr || stdout || error?.message || '').trim().slice(0, 600);
-    if (!error) return { state: 'queued', diagnostic };
+    if (!error) return { state: 'queued', diagnostic, needsWake: /message was queued, but could not resume thread/i.test(diagnostic) };
     const rejected = ['ENOENT', 'EACCES', 'EPERM'].includes(error.code) ||
         /(?:thread|session)[^\r\n]{0,120}(?:not found|does not exist|invalid)|(?:no|unknown) (?:matching )?(?:thread|session)/i.test(diagnostic);
     return { state: rejected ? 'failed' : 'unknown', diagnostic };
