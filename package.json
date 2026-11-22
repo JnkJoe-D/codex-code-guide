@@ -1,0 +1,329 @@
+{
+    "name": "zzz-code-guide",
+    "displayName": "Codex 代码导读",
+    "description": "从 VS Code 向指定的 Codex 对话提交代码批注，并在原位置继续讨论。",
+    "version": "0.3.0",
+    "publisher": "zzz-local",
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "main": "./extension.js",
+    "capabilities": {
+        "virtualWorkspaces": false,
+        "untrustedWorkspaces": {
+            "supported": true
+        }
+    },
+    "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "zzzCodeGuide",
+                    "title": "Codex 代码导读",
+                    "icon": "guide.svg"
+                }
+            ]
+        },
+        "views": {
+            "zzzCodeGuide": [
+                {
+                    "id": "zzzCodeGuide.context",
+                    "name": "代码导读",
+                    "icon": "guide.svg"
+                },
+                {
+                    "id": "zzzCodeGuide.review",
+                    "name": "Codex 批注队列",
+                    "icon": "guide.svg"
+                }
+            ]
+        },
+        "commands": [
+            {
+                "command": "zzzCodeGuide.refresh",
+                "title": "刷新代码导读",
+                "category": "代码导读",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "zzzReview.add",
+                "title": "添加走读批注",
+                "category": "代码导读",
+                "icon": "$(comment)"
+            },
+            {
+                "command": "zzzReview.addPreset",
+                "title": "用预设添加走读批注",
+                "category": "代码导读"
+            },
+            {
+                "command": "zzzReview.submitFile",
+                "title": "提交当前文件批注到 Codex",
+                "category": "代码导读"
+            },
+            {
+                "command": "zzzReview.submitWorkspace",
+                "title": "提交工作区批注到 Codex",
+                "category": "代码导读",
+                "icon": "$(send)"
+            },
+            {
+                "command": "zzzReview.copy",
+                "title": "重新复制批次投递指令",
+                "category": "代码导读",
+                "icon": "$(copy)"
+            },
+            {
+                "command": "zzzReview.refresh",
+                "title": "刷新批注回答",
+                "category": "代码导读",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "zzzReview.save",
+                "title": "保存批注",
+                "category": "代码导读"
+            },
+            {
+                "command": "zzzReview.cancel",
+                "title": "取消编辑",
+                "category": "代码导读",
+                "icon": "$(close)"
+            },
+            {
+                "command": "zzzReview.edit",
+                "title": "编辑批注",
+                "category": "代码导读",
+                "icon": "$(edit)"
+            },
+            {
+                "command": "zzzReview.remove",
+                "title": "删除草稿",
+                "category": "代码导读",
+                "icon": "$(trash)"
+            },
+            {
+                "command": "zzzReview.close",
+                "title": "关闭已回答批注",
+                "category": "代码导读",
+                "icon": "$(check)"
+            },
+            {
+                "command": "zzzReview.bind",
+                "title": "绑定 Codex 对话",
+                "category": "代码导读"
+            },
+            {
+                "command": "zzzReview.openTarget",
+                "title": "打开绑定的 Codex 对话",
+                "category": "代码导读",
+                "icon": "$(link-external)"
+            },
+            {
+                "command": "zzzReview.setCli",
+                "title": "设置 Codex 命令位置",
+                "category": "代码导读"
+            },
+            {
+                "command": "zzzReview.retry",
+                "title": "重试未确认投递的批次",
+                "category": "代码导读"
+            },
+            {
+                "command": "zzzReview.reply",
+                "title": "保存追问",
+                "category": "代码导读",
+                "icon": "$(comment)"
+            },
+            {
+                "command": "zzzReview.references",
+                "title": "查看回答引用",
+                "category": "代码导读",
+                "icon": "$(references)"
+            },
+            {
+                "command": "zzzReview.draftTask",
+                "title": "生成修改请求",
+                "category": "代码导读",
+                "icon": "$(edit)"
+            },
+            {
+                "command": "zzzCodeGuide.installSkill",
+                "title": "安装 Codex 批注 Skill",
+                "category": "代码导读"
+            },
+            {
+                "command": "zzzCodeGuide.setUpdates",
+                "title": "设置 GitHub 自动更新",
+                "category": "代码导读"
+            },
+            {
+                "command": "zzzCodeGuide.checkUpdate",
+                "title": "检查 GitHub 更新",
+                "category": "代码导读"
+            },
+            {
+                "command": "zzzReview.sendTaskDraft",
+                "title": "发送当前修改请求草稿",
+                "category": "代码导读"
+            }
+        ],
+        "menus": {
+            "view/title": [
+                {
+                    "command": "zzzCodeGuide.refresh",
+                    "when": "view == zzzCodeGuide.context",
+                    "group": "navigation"
+                },
+                {
+                    "command": "zzzReview.submitWorkspace",
+                    "when": "view == zzzCodeGuide.review",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "zzzReview.refresh",
+                    "when": "view == zzzCodeGuide.review",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "zzzReview.submitFile",
+                    "when": "view == zzzCodeGuide.review",
+                    "group": "zzzReview@1"
+                },
+                {
+                    "command": "zzzReview.copy",
+                    "when": "view == zzzCodeGuide.review",
+                    "group": "zzzReview@2"
+                },
+                {
+                    "command": "zzzReview.bind",
+                    "when": "view == zzzCodeGuide.review",
+                    "group": "zzzReview@3"
+                },
+                {
+                    "command": "zzzReview.openTarget",
+                    "when": "view == zzzCodeGuide.review",
+                    "group": "zzzReview@4"
+                },
+                {
+                    "command": "zzzReview.retry",
+                    "when": "view == zzzCodeGuide.review",
+                    "group": "zzzReview@5"
+                }
+            ],
+            "editor/context": [
+                {
+                    "command": "zzzReview.add",
+                    "when": "resourceScheme == file",
+                    "group": "navigation@-1000"
+                },
+                {
+                    "command": "zzzReview.addPreset",
+                    "when": "resourceScheme == file",
+                    "group": "navigation@-999"
+                }
+            ],
+            "editor/title": [
+                {
+                    "command": "zzzReview.submitWorkspace",
+                    "when": "resourceScheme == file",
+                    "group": "navigation@6"
+                }
+            ],
+            "comments/commentThread/title": [
+                {
+                    "command": "zzzReview.edit",
+                    "when": "commentController == zzzCodeReview && commentThread == zzzReviewDraft",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "zzzReview.remove",
+                    "when": "commentController == zzzCodeReview && commentThread == zzzReviewDraft",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "zzzReview.close",
+                    "when": "commentController == zzzCodeReview && commentThread == zzzReviewAnswered",
+                    "group": "navigation"
+                },
+                {
+                    "command": "zzzReview.draftTask",
+                    "when": "commentController == zzzCodeReview && commentThread == zzzReviewAnswered",
+                    "group": "zzzReview"
+                }
+            ],
+            "commandPalette": [
+                {
+                    "command": "zzzReview.save",
+                    "when": "false"
+                },
+                {
+                    "command": "zzzReview.cancel",
+                    "when": "false"
+                },
+                {
+                    "command": "zzzReview.edit",
+                    "when": "false"
+                },
+                {
+                    "command": "zzzReview.remove",
+                    "when": "false"
+                },
+                {
+                    "command": "zzzReview.close",
+                    "when": "false"
+                },
+                {
+                    "command": "zzzReview.reply",
+                    "when": "false"
+                },
+                {
+                    "command": "zzzReview.references",
+                    "when": "false"
+                },
+                {
+                    "command": "zzzReview.draftTask",
+                    "when": "false"
+                }
+            ],
+            "comments/comment/context": [
+                {
+                    "command": "zzzReview.save",
+                    "when": "commentController == zzzCodeReview && comment == zzzReviewEditor",
+                    "group": "inline@1"
+                },
+                {
+                    "command": "zzzReview.cancel",
+                    "when": "commentController == zzzCodeReview && comment == zzzReviewEditor",
+                    "group": "inline@2"
+                },
+                {
+                    "command": "zzzReview.references",
+                    "when": "commentController == zzzCodeReview && comment == codeGuideReplyWithReferences",
+                    "group": "inline"
+                }
+            ],
+            "comments/commentThread/context": [
+                {
+                    "command": "zzzReview.reply",
+                    "when": "commentController == zzzCodeReview && commentThread == zzzReviewAnswered && !commentIsEmpty",
+                    "group": "inline"
+                }
+            ]
+        }
+    },
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/JnkJoe-D/codex-code-guide.git"
+    },
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "extensionKind": [
+        "ui"
+    ]
+}

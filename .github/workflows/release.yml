@@ -1,0 +1,40 @@
+name: Publish VS Code extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag, for example v0.3.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify version and JavaScript syntax
+        run: |
+          test "$RELEASE_TAG" = "v$(node -p 'require("./package.json").version')"
+          for file in ./*.js; do node --check "$file"; done
+      - name: Package extension
+        run: npx --yes @vscode/vsce@3.6.2 package
+      - name: Publish VSIX
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          name=$(node -p 'require("./package.json").name')
+          gh release create "$RELEASE_TAG" --verify-tag --generate-notes "$name-${RELEASE_TAG#v}.vsix"
